@@ -553,15 +553,30 @@
   
               function fetchPart(index) {
                   if (index >= fileParts.length) {
+                      console.log("All parts downloaded. Stitching...");
                       let mergedBlob = new Blob(buffers);
                       let mergedFileUrl = URL.createObjectURL(mergedBlob);
                       resolve(mergedFileUrl);
                       return;
                   }
-                  fetch(fileParts[index]).then((response) => response.arrayBuffer()).then((data) => {
+                  
+                  // Update the loading text so you can see progress!
+                  document.getElementById('status').innerText = `Downloading part ${index + 1} of 12...`;
+                  console.log(`Fetching: ${fileParts[index]}`);
+
+                  fetch(fileParts[index]).then((response) => {
+                      if (!response.ok) {
+                          throw new Error(`HTTP error! status: ${response.status} for ${fileParts[index]}`);
+                      }
+                      return response.arrayBuffer();
+                  }).then((data) => {
                       buffers.push(data);
                       fetchPart(index + 1);
-                  }).catch(reject);
+                  }).catch((err) => {
+                      console.error("Failed to fetch part:", err);
+                      document.getElementById('status').innerText = `Error on part ${index + 1}! Check console.`;
+                      reject(err);
+                  });
               }
               fetchPart(0);
           });
@@ -575,17 +590,18 @@
           return parts;
       }
   
+      // Start the process
       mergeFiles(getParts("game.unx", 1, 12)).then(async url => {
+          console.log("Stitching complete! Injecting engine...");
+          document.getElementById('status').innerText = `Loading engine...`;
           window.gameUnxUrl = url;
   
           const originalFetch = window.fetch;
           window.fetch = async function (...args) {
               let [url, options] = args;
               if (typeof url === 'string' && url.includes("game.unx")) {
-                  console.log("fetch:", url);
                   url = window.gameUnxUrl;
               } else if (url instanceof Request && url.url.includes("game.unx")) {
-                  console.log("fetch request:", url.url);
                   url = new Request(window.gameUnxUrl, url);
               }
               return originalFetch.call(this, url, options);
@@ -593,12 +609,12 @@
   
           const originalOpen = XMLHttpRequest.prototype.open;
           XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-              if (url.includes("game.unx")) {
-                  console.log("XHR:", url);
+              if (typeof url === 'string' && url.includes("game.unx")) {
                   url = window.gameUnxUrl;
               }
               return originalOpen.call(this, method, url, ...rest);
           };
+          
           let index = document.createElement("script");
           index.src = "index.js";
           document.body.appendChild(index);
@@ -609,6 +625,6 @@
       }).catch(error => {
           console.error("Failed to merge files:", error);
       });
-  </script>      
+  </script>
   </body>
 </html>
