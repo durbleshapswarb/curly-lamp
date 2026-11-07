@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <base href="https://cdn.jsdelivr.net/gh/genizy/web-port@main/undertale-yellow/">
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
+    <link rel="icon" type="x-icon" href="favicon.png">
+    <title>UNDERTALE YELLOW</title>
+    <style>
+      @-webkit-keyframes rotation {
+        from {
+          -webkit-transform: rotate(0deg);
+        }
+
+        to {
+          -webkit-transform: rotate(360deg);
+        }
+      }
+
+      @-moz-keyframes rotation {
+        from {
+          -moz-transform: rotate(0deg);
+        }
+
+        to {
+          -moz-transform: rotate(360deg);
+        }
+      }
+
+      @-o-keyframes rotation {
+        from {
+          -o-transform: rotate(0deg);
+        }
+
+        to {
+          -o-transform: rotate(360deg);
+        }
+      }
+
+      @keyframes rotation {
+        from {
+          transform: rotate(0deg);
+        }
+
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      html {
+        background: #FFFFFF;
+      }
+
+      body {
+        font-family: arial;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        min-height: -webkit-fill-available;
+        min-height: fill-available;
+        min-height: 100vh; /* Otherwise contents can be covered by an address bar in Safari on iOS 15 */
+        min-width: 100vw;
+        background: radial-gradient(
+          56.63% 56.63% at 50% 43.37%,
+          transparent 0%,
+          transparent 100%
+        );
+		background-color: black;
+        display: flex;
+        flex-direction: column;
+        overflow-x: hidden;
+		place-items: center;
+      }
+
+      body.scrollingDisabled {
+        overflow: hidden;
+      }
+
+      .emscripten {
+        padding-right: 0;
+        display: block;
+      }
+
+      div.emscripten {
+        text-align: center;
+		font-family: "Lucida Console", Monaco, monospace;
+      }
+
+      /* the canvas *must not* have any border or padding, or mouse coords will be wrong */
+      canvas.emscripten {
+        display: none;
+        background-color: black;
+        position: flex;
+        transition: opacity 5s ease-in;
+        -webkit-transition: opacity 5s ease-in;
+        opacity: 0;
+        filter: blur(0) grayscale(0);
+        image-rendering: optimizeSpeed;             /* Older versions of FF          */
+        image-rendering: -moz-crisp-edges;          /* FF 6.0+                       */
+        image-rendering: -webkit-optimize-contrast; /* Safari                        */
+        image-rendering: -o-crisp-edges;            /* OS X & Windows Opera (12.02+) */
+        image-rendering: pixelated;                 /* Awesome future-browsers       */
+        -ms-interpolation-mode: nearest-neighbor;   /* IE                            */
+      }
+
+      canvas.active {
+        animation-name: fadeIn;
+        animation-duration: 2s;
+        opacity: 1;
+      }
+
+      canvas.paused {
+        animation-name: blur;
+        animation-duration: 0.5s;
+        filter: blur(2px) grayscale(1);
+      }
+
+      canvas.unpaused {
+        animation-name: none;
+      }
+
+      canvas.animatedSizeTransitions {
+        transition: width 0.3s ease, height 0.3s ease;
+      }
+
+      @keyframes fadeIn {
+        0% {
+          opacity: 0;
+        }
+
+        100% {
+          opacity: 1;
+        }
+      }
+
+      @keyframes blur {
+        0% {
+          filter: blur(0) grayscale(0);
+        }
+
+        100% {
+          filter: blur(2px) grayscale(1);
+        }
+      }
+
+      .spinner {
+        height: 30px;
+        width: 30px;
+
+        -webkit-animation: rotation 0.8s linear infinite;
+        -moz-animation: rotation 0.8s linear infinite;
+        -o-animation: rotation 0.8s linear infinite;
+        animation: rotation 0.8s linear infinite;
+
+        border: 5px solid #bdff00;
+        border-top: 5px solid #719900;
+        border-radius: 100%;
+      }
+
+      #status {
+        display: inline-block;
+        vertical-align: top;
+        font-weight: bold;
+        color: white;
+      }
+
+      #progress {
+        width: 250px;
+        height: 10px;
+        -webkit-appearance: none;
+        appearance: none;
+        padding: 5px;
+      }
+
+      /* Determines the style of the background of the progress bar */
+      progress[value]::-webkit-progress-bar {
+        background-color: #8492a6;
+        height: 10px;
+        border-radius: 15px;
+      }
+      /* Determines the style of the completed part of the progress bar */
+      progress[value]::-webkit-progress-value {
+        background-image: -webkit-linear-gradient(left, #719900, #bdff00);
+        height: 10px;
+        border-radius: 15px;
+      }
+
+      div.loading {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        pointer-events: none;
+      }
+      div.loading > * {
+        padding: 10px;
+        margin: 10px;
+      }
+
+      .output-container {
+        text-align: center;
+        margin-top: auto;
+      }
+      .output-button {
+        border: none;
+        width: 200px;
+        height: 25px;
+        margin: 5px;
+        border-radius: 5px;
+        cursor: pointer;
+        background-color: black;
+        color: white;
+		outline-color: #20c20e;
+		outline-style: dashed;
+        font-family: "Lucida Console", Monaco, monospace;
+      }
+
+      #output {
+        display: none;
+        height: 200px;
+        background-color: black;
+        color: white;
+        font-family: "Lucida Console", Monaco, monospace;
+        outline: none;
+        border: none;
+        padding: 0;
+        width: 100%;
+      }
+
+      #message-container {
+        display: none;
+        min-height: 50px;
+        background-color: rgba(20, 20, 20, 0.5);
+        outline: none;
+        border: none;
+        padding: 0;
+        width: 100%;
+        position: absolute;
+        top: 0;
+      }
+
+      #messages {
+        margin-left: 50px;
+        color: white;
+        font-family: "Lucida Console", Monaco, monospace;
+        outline: none;
+        border: none;
+        padding: 0;
+      }
+
+      img.qrCode {
+         opacity: 1.0;
+         width: 50%;
+         height: 50%;
+      }
+
+      #pauseMenuContainer {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #pauseMenuContainer[hidden] {
+        display: none !important;
+        opacity: 0;
+      }
+
+      #pauseMenuBorder {
+        background: linear-gradient(135deg, #FA1E4E, transparent 40%);
+        padding: 1px;
+        border-radius: 4px;
+        clip-path: polygon(10.5px 0, 100% 0, 100% 100%, 0 100%, 0 10.5px);
+        width: 70vw;
+        max-width: 400px;
+      }
+
+      #pauseMenu {
+        display: flex;
+        flex-direction: column;
+        padding: 60px 30px 60px 30px;
+        background: linear-gradient(180deg, #2E273F 16.15%, rgba(46, 39, 63, 0.79) 56.25%, #2E273F 91.15%);
+        border-radius: 4px;
+        clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+        animation-name: fadeIn;
+        animation-duration: 0.5s;
+        opacity: 1;
+      }
+
+      #pauseMenu button {
+        font-weight: 500;
+        font-size: 17px;
+        color: white;
+        background: #FA1E4E;
+        border: 1px solid #FA1E4E;
+        border-radius: 6px;
+        padding: 12px 24px;
+        margin: 5px 0;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+
+      #pauseMenu button#quitButton {
+        background: #FA1E4E40;
+      }
+
+      #pauseMenu button:hover {
+        filter: brightness(1.15);
+      }
+
+      #pauseMenu button:active {
+        filter: brightness(0.85);
+      }
+
+      #pauseMenu button[hidden] {
+        display: none;
+      }
+      /* Mobile touch controls */
+      #touchControls { display: none; }
+      @media (pointer: coarse), (max-width: 760px), (min-width: 761px) {
+        body { min-width: 0; min-height: 100dvh; overscroll-behavior: none; touch-action: none; }
+        #touchControls {
+          position: fixed; inset: 0; z-index: 20; display: block;
+          pointer-events: none; user-select: none; -webkit-user-select: none;
+        }
+        .control-pad {
+          position: absolute; top: 50%; bottom: auto;
+          width: min(clamp(190px, 48vw, 280px), 58dvh);
+          height: min(clamp(190px, 48vw, 280px), 58dvh);
+          border: 0; border-radius: 50%;
+          background: radial-gradient(circle, rgba(115,115,115,.72) 0 34%, transparent 34.5%);
+          box-shadow: none;
+          pointer-events: auto; touch-action: none;
+        }
+        #joystick { left: max(0px, env(safe-area-inset-left)); transform: translate(-14%, -50%); }
+        #stick {
+          position: absolute; left: 50%; top: 50%; width: 38%; height: 38%;
+          transform: translate(-50%,-50%); border-radius: 50%;
+          border: 0; background: rgba(190,190,190,.42);
+          box-shadow: none; pointer-events: none;
+        }
+        .pad-mark { display:none; }
+        .pad-up { top: 8px; left:50%; transform:translateX(-50%); }
+        .pad-down { bottom:8px; left:50%; transform:translateX(-50%); }
+        .pad-left { left:9px; top:50%; transform:translateY(-50%); }
+        .pad-right { right:9px; top:50%; transform:translateY(-50%); }
+        #actionButtons {
+          position:absolute; right:max(12px, env(safe-area-inset-right));
+          top:50%; bottom:auto; transform:translateY(-50%);
+          width:clamp(64px, 17vw, 92px);
+          height:min(clamp(220px, 52vw, 270px), 74dvh); pointer-events:none;
+        }
+        .action-button {
+          position:absolute; right:0; width:clamp(58px, 16vw, 82px); height:clamp(58px, 16vw, 82px);
+          border-radius:50%; border:0; color:white; font:bold 22px Arial;
+          text-shadow:none; box-shadow:none;
+          pointer-events:auto; touch-action:none; -webkit-tap-highlight-color:transparent;
+        }
+        #buttonC { top:0; background:#302b50; }
+        #buttonX { top:50%; transform:translateY(-50%); background:#302b50; }
+        #buttonZ { bottom:0; background:#302b50; }
+        .action-button.is-pressed { filter:brightness(1.35); transform:scale(.94); }
+        #buttonX.is-pressed { transform:translateY(-50%) scale(.94); }
+        #keyboardButton {
+          position:absolute; top:-34px; right:8px; width:27px; height:27px;
+          border:0; border-radius:6px; padding:0; color:#fff; background:#302b50;
+          font:16px Arial; line-height:27px; text-align:center;
+          pointer-events:auto; touch-action:manipulation;
+        }
+        #keyboardInput {
+          position:fixed; left:50%; bottom:0; width:2px; height:2px; padding:0;
+          border:0; opacity:.01; font-size:16px; z-index:-1;
+        }
+        canvas.emscripten { touch-action:none; }
+      }
+      @media (orientation: landscape) and (max-height: 500px) {
+        .control-pad { width: min(46vh, 220px); height:min(46vh, 220px); }
+        #actionButtons { height:min(66vh,240px); width:75px; }
+        .action-button { width:min(16vh,62px); height:min(16vh,62px); font-size:18px; }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas
+      class="emscripten"
+      id="canvas"
+      oncontextmenu="event.preventDefault()"
+      tabindex="-1"
+    >
+    </canvas>
+    <div id="touchControls" aria-label="Touch game controls">
+      <div id="joystick" class="control-pad" role="application" aria-label="Directional joystick">
+        <span class="pad-mark pad-up">▲</span><span class="pad-mark pad-down">▼</span>
+        <span class="pad-mark pad-left">◀</span><span class="pad-mark pad-right">▶</span>
+        <div id="stick"></div>
+      </div>
+      <div id="actionButtons" aria-label="Action buttons">
+        <button id="keyboardButton" type="button" aria-label="Open keyboard" title="Open keyboard">⌨</button>
+        <button id="buttonC" class="action-button" type="button" aria-label="C">C</button>
+        <button id="buttonX" class="action-button" type="button" aria-label="X">X</button>
+        <button id="buttonZ" class="action-button" type="button" aria-label="Z">Z</button>
+      </div>
+    </div>
+    <input id="keyboardInput" type="text" aria-label="Game keyboard input" autocomplete="off" autocapitalize="off" spellcheck="false" />
+    <script>
+      (() => {
+        const pad = document.getElementById('joystick');
+        const stick = document.getElementById('stick');
+        const keyboardButton = document.getElementById('keyboardButton');
+        const keyboardInput = document.getElementById('keyboardInput');
+        const held = new Set();
+        let outsidePointerId = null;
+        const keyMap = { up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight' };
+        const keyCodes = { ArrowLeft:37, ArrowUp:38, ArrowRight:39, ArrowDown:40, z:90, x:88, c:67 };
+        function setKey(key, on) {
+          if (on && !held.has(key)) {
+            held.add(key);
+            dispatchKeyboardEvent('keydown', key);
+          } else if (!on && held.has(key)) {
+            held.delete(key);
+            dispatchKeyboardEvent('keyup', key);
+          }
+        }
+        function dispatchKeyboardEvent(type, key) {
+          const target = document.getElementById('canvas') || document;
+          const code = keyCodes[key] || 0;
+          const event = new KeyboardEvent(type, {
+            key, code: key.startsWith('Arrow') ? key : `Key${key.toUpperCase()}`,
+            bubbles: true, cancelable: true, composed: true,
+            keyCode: code, which: code, charCode: type === 'keypress' ? code : 0
+          });
+          // Some older canvas game engines inspect the legacy read-only fields.
+          try {
+            Object.defineProperty(event, 'keyCode', { get: () => code });
+            Object.defineProperty(event, 'which', { get: () => code });
+          } catch (_) {}
+          target.dispatchEvent(event);
+        }
+        keyboardButton.addEventListener('pointerdown', event => event.stopPropagation());
+        keyboardButton.addEventListener('click', () => {
+          if (document.activeElement === keyboardInput) keyboardInput.blur();
+          else keyboardInput.focus({preventScroll:true});
+        });
+        keyboardInput.addEventListener('keydown', event => {
+          if (event.key === 'Process' || event.key === 'Dead' || event.isComposing) return;
+          event.preventDefault();
+          if (event.key.startsWith('Arrow') || event.key.length === 1) {
+            const key = event.key.startsWith('Arrow') ? event.key : event.key.toLowerCase();
+            setKey(key, true);
+          }
+        });
+        keyboardInput.addEventListener('keyup', event => {
+          const key = event.key.startsWith('Arrow') ? event.key : event.key.toLowerCase();
+          setKey(key, false);
+        });
+        keyboardInput.addEventListener('blur', () => {
+          held.forEach(key => setKey(key, false));
+        });
+        function updatePad(event) {
+          const r = pad.getBoundingClientRect();
+          const cx = r.left + r.width/2, cy = r.top + r.height/2;
+          let dx = event.clientX-cx, dy=event.clientY-cy;
+          const max = r.width*.18, len=Math.hypot(dx,dy);
+          if (len > max) { dx=dx/len*max; dy=dy/len*max; }
+          stick.style.left = `calc(50% + ${dx}px)`;
+          stick.style.top = `calc(50% + ${dy}px)`;
+          const nx=(event.clientX-cx)/(r.width*.43), ny=(event.clientY-cy)/(r.height*.43);
+          const distance=Math.hypot(nx,ny), ax=Math.abs(nx), ay=Math.abs(ny);
+          const cardinalBias=1.45;
+          const horizontal=ax > ay*cardinalBias, vertical=ay > ax*cardinalBias;
+          const diagonal=!horizontal && !vertical && distance>.14;
+          const active=distance>.14;
+          setKey(keyMap.left, active && nx<0 && (horizontal || diagonal));
+          setKey(keyMap.right, active && nx>0 && (horizontal || diagonal));
+          setKey(keyMap.up, active && ny<0 && (vertical || diagonal));
+          setKey(keyMap.down, active && ny>0 && (vertical || diagonal));
+        }
+        function releasePad() {
+          Object.values(keyMap).forEach(k=>setKey(k,false));
+          stick.style.left='50%'; stick.style.top='50%';
+        }
+        pad.addEventListener('pointerdown', e=>{ e.preventDefault(); const gameCanvas=document.getElementById('canvas'); if(gameCanvas) gameCanvas.focus({preventScroll:true}); pad.setPointerCapture(e.pointerId); updatePad(e); });
+        pad.addEventListener('pointermove', e=>{ if (pad.hasPointerCapture(e.pointerId)) updatePad(e); });
+        ['pointerup','pointercancel','lostpointercapture'].forEach(type=>pad.addEventListener(type,releasePad));
+        // The unused left-side margins also act as a generous joystick touch zone.
+        // Ignore touches over the game canvas and the action-button cluster.
+        window.addEventListener('pointerdown', e=>{
+          if (e.clientX >= window.innerWidth * .5 || e.target.closest('#actionButtons')) return;
+          const canvas=document.getElementById('canvas');
+          if (canvas) {
+            const r=canvas.getBoundingClientRect();
+            if (e.clientX>=r.left && e.clientX<=r.right && e.clientY>=r.top && e.clientY<=r.bottom) return;
+          }
+          if (pad.contains(e.target)) return;
+          e.preventDefault(); outsidePointerId=e.pointerId;
+          if (canvas) canvas.focus({preventScroll:true});
+          updatePad(e);
+        }, {capture:true,passive:false});
+        window.addEventListener('pointermove',e=>{
+          if (e.pointerId===outsidePointerId) { e.preventDefault(); updatePad(e); }
+        }, {capture:true,passive:false});
+        const finishOutsidePointer=e=>{
+          if (e.pointerId===outsidePointerId) { outsidePointerId=null; releasePad(); }
+        };
+        window.addEventListener('pointerup',finishOutsidePointer,true);
+        window.addEventListener('pointercancel',finishOutsidePointer,true);
+        document.querySelectorAll('.action-button').forEach(button=>{
+          const key=button.textContent.trim().toLowerCase();
+          button.addEventListener('pointerdown',e=>{e.preventDefault();const gameCanvas=document.getElementById('canvas');if(gameCanvas)gameCanvas.focus({preventScroll:true});button.setPointerCapture(e.pointerId);button.classList.add('is-pressed');setKey(key,true);});
+          const up=()=>{button.classList.remove('is-pressed');setKey(key,false);};
+          ['pointerup','pointercancel','lostpointercapture'].forEach(type=>button.addEventListener(type,up));
+          button.addEventListener('contextmenu',e=>e.preventDefault());
+        });
+        window.addEventListener('blur',()=>{releasePad();['z','x','c'].forEach(k=>setKey(k,false));});
+      })();
+    </script>
+        <div id="pauseMenuContainer" hidden>
+      <div id="pauseMenuBorder">
+        <div id="pauseMenu">
+          <button id="resumeButton" onclick="resume()">
+            Resume
+          </button>
+          <button id="quitButton" onclick="quitIfSupported()">
+            Quit
+          </button>
+        </div>
+        </div>
+    </div>
+    <div class="loading">
+      <div class="spinner" id="spinner"></div>
+      <div class="emscripten" id="status">Downloading...</div>
+
+      <progress value="0" max="100" id="progress" hidden="1"></progress>
+    </div>
+
+    <div id="message-container">
+      <div id="messages">
+      </div>
+    </div>
+    <script>
+      function mergeFiles(fileParts) {
+          return new Promise((resolve, reject) => {
+              let buffers = [];
+  
+              function fetchPart(index) {
+                  if (index >= fileParts.length) {
+                      let mergedBlob = new Blob(buffers);
+                      let mergedFileUrl = URL.createObjectURL(mergedBlob);
+                      resolve(mergedFileUrl);
+                      return;
+                  }
+                  fetch(fileParts[index]).then((response) => response.arrayBuffer()).then((data) => {
+                      buffers.push(data);
+                      fetchPart(index + 1);
+                  }).catch(reject);
+              }
+              fetchPart(0);
+          });
+      }
+  
+      function getParts(file, start, end) {
+          let parts = [];
+          for (let i = start; i <= end; i++) {
+              parts.push(file + ".part" + i);
+          }
+          return parts;
+      }
+  
+      mergeFiles(getParts("game.unx", 1, 12)).then(async url => {
+          window.gameUnxUrl = url;
+  
+          const originalFetch = window.fetch;
+          window.fetch = async function (...args) {
+              let [url, options] = args;
+              if (typeof url === 'string' && url.includes("game.unx")) {
+                  console.log("fetch:", url);
+                  url = window.gameUnxUrl;
+              } else if (url instanceof Request && url.url.includes("game.unx")) {
+                  console.log("fetch request:", url.url);
+                  url = new Request(window.gameUnxUrl, url);
+              }
+              return originalFetch.call(this, url, options);
+          };
+  
+          const originalOpen = XMLHttpRequest.prototype.open;
+          XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+              if (url.includes("game.unx")) {
+                  console.log("XHR:", url);
+                  url = window.gameUnxUrl;
+              }
+              return originalOpen.call(this, method, url, ...rest);
+          };
+          let index = document.createElement("script");
+          index.src = "index.js";
+          document.body.appendChild(index);
+  
+          let runner = document.createElement("script");
+          runner.src = "runner.js";
+          document.body.appendChild(runner);
+      }).catch(error => {
+          console.error("Failed to merge files:", error);
+      });
+  </script>      
+  </body>
+</html>
