@@ -390,7 +390,86 @@
       }
     </style>
   </head>
-  <body>
+  <script>
+    // --- START OF MULTI-PART STITCHING SYSTEM ---
+    (function() {
+      const totalParts = 12; // Updated for 12 parts
+      let cachedBlobUrl = null;
+      let fetchPromise = null;
+
+      async function getCombinedGameUnx(originalUrl) {
+        if (cachedBlobUrl) return cachedBlobUrl;
+        if (!fetchPromise) {
+          fetchPromise = (async () => {
+            const buffers = [];
+            // Download parts ONE BY ONE to save mobile RAM
+            for (let i = 1; i <= totalParts; i++) {
+              document.getElementById('status').innerText = `Downloading part ${i} of ${totalParts}...`;
+              
+              // Fetches game.unx.part1, game.unx.part2, etc.
+              const res = await fetch(`${originalUrl}.part${i}`);
+              
+              if (!res.ok) throw new Error(`Could not load part ${i}`);
+              const buffer = await res.arrayBuffer();
+              buffers.push(buffer);
+            }
+            
+            document.getElementById('status').innerText = `Stitching files...`;
+            
+            // Stitch segments into a combined object binary
+            const combinedBlob = new Blob(buffers, { type: 'application/octet-stream' });
+            cachedBlobUrl = URL.createObjectURL(combinedBlob);
+            return cachedBlobUrl;
+          })();
+        }
+        return fetchPromise;
+      }
+
+      // Intercept fetch API calls
+      const nativeFetch = window.fetch;
+      window.fetch = async function(resource, options) {
+        const url = typeof resource === 'string' ? resource : resource.url;
+        
+        // Looks for game.unx
+        if (url && url.endsWith('game.unx')) {
+          try {
+            const stitchedUrl = await getCombinedGameUnx(url);
+            return nativeFetch(stitchedUrl, options);
+          } catch (e) {
+            console.error("Stitching error during Fetch:", e);
+          }
+        }
+        return nativeFetch.apply(this, arguments);
+      };
+
+      // Intercept older XMLHttpRequest calls
+      const nativeOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url, ...args) {
+        if (typeof url === 'string' && url.endsWith('game.unx')) {
+          this._isGameUnx = true;
+          this._gameUnxUrl = url;
+        }
+        return nativeOpen.apply(this, [method, url, ...args]);
+      };
+
+      const nativeSend = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.send = function(...args) {
+        if (this._isGameUnx) {
+          getCombinedGameUnx(this._gameUnxUrl).then(stitchedUrl => {
+            nativeOpen.apply(this, ['GET', stitchedUrl, true]);
+            nativeSend.apply(this, args);
+          }).catch(e => {
+            console.error("Stitching error during XHR:", e);
+            nativeSend.apply(this, args);
+          });
+          return;
+        }
+        return nativeSend.apply(this, args);
+      };
+    })();
+    // --- END OF MULTI-PART STITCHING SYSTEM ---
+</script>
+	<body>
     <canvas
       class="emscripten"
       id="canvas"
