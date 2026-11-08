@@ -647,5 +647,19 @@
     </script>
   </body>
 </html>
+      <!-- Your merging script is up here -->
+
+    <!-- ADD THIS SCRIPT -->
+    <script>
+      // Unlock mobile audio on first touch
+      document.addEventListener('touchstart', function unlockAudio() {
+          if (typeof Module !== 'undefined' && Module.audioContext && Module.audioContext.state === 'suspended') {
+              Module.audioContext.resume();
+          }
+          document.removeEventListener('touchstart', unlockAudio);
+      }, { once: true });
+    </script>
   </body>
+</html>
+</body>
 </html>
