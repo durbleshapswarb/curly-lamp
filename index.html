@@ -629,5 +629,23 @@
           console.error("Failed to merge files:", error);
       });
   </script>
+      <script>
+      // ... your existing mergeFiles code is up here ...
+    </script>
+
+    <!-- PUT THE NEW SCRIPT HERE -->
+    <script>
+        const originalFetch = window.fetch;
+        window.fetch = async function(url, ...args) {
+            if (typeof url === 'string') {
+                if (url.includes('undefined/')) {
+                    url = url.replace('undefined/', '');
+                }
+            }
+            return originalFetch.call(this, url, ...args);
+        };
+    </script>
+  </body>
+</html>
   </body>
 </html>
