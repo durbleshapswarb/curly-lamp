@@ -1,4 +1,3 @@
-// sw.js
 self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
@@ -10,17 +9,17 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const url = new URL(event.request.url);
 
-    // Intercept the fake request from index.html
+    // Intercept our fake stream request
     if (url.pathname.endsWith('stream-game.unx')) {
         event.respondWith((async () => {
             const streams = [];
             
-            // Fetch all 12 parts
+            // Fetch the 12 parts
             for (let i = 1; i <= 12; i++) {
-                // Make sure this path matches your repo structure!
-                const partUrl = new URL(`game.unx.part${i}`, self.location.origin).href;
+                // This builds the correct absolute path to your parts
+                const partUrl = new URL(`/curly-lamp/game.unx.part${i}`, self.location.origin).href;
                 const response = await fetch(partUrl);
-                if (!response.ok) return new Response('Part missing', { status: 404 });
+                if (!response.ok) return new Response(`Part ${i} missing`, { status: 404 });
                 streams.push(response.body);
             }
 
