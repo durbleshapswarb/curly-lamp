@@ -550,44 +550,93 @@
       </div>
     </div>
     <script>
-      // 1. Intercept the game.unx fetch and point it to our streaming Service Worker
-      const originalFetch = window.fetch;
-      window.fetch = async function(url, ...args) {
-          if (typeof url === 'string' && url.includes('game.unx')) {
-              url = '/stream-game.unx'; // Point to the Service Worker
-          }
-          return originalFetch.call(this, url, ...args);
-      };
-
-      // 2. Register the Service Worker
-      if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.register('sw.js').then(() => {
-              console.log("Service Worker registered.");
-              document.getElementById('status').innerText = "Loading engine...";
-              
-              // Mobile Audio Unlock
-              document.addEventListener('touchstart', function unlockAudio() {
-                  if (typeof Module !== 'undefined' && Module.audioContext && Module.audioContext.state === 'suspended') {
-                      Module.audioContext.resume();
+      function mergeFiles(fileParts) {
+          return new Promise((resolve, reject) => {
+              let buffers = [];
+  
+              function fetchPart(index) {
+                  if (index >= fileParts.length) {
+                      console.log("All parts downloaded. Stitching...");
+                      let mergedBlob = new Blob(buffers);
+                      let mergedFileUrl = URL.createObjectURL(mergedBlob);
+                      resolve(mergedFileUrl);
+                      return;
                   }
-                  document.removeEventListener('touchstart', unlockAudio);
-              }, { once: true });
-
-              // Load the game engine
-              let index = document.createElement("script");
-              index.src = "index.js";
-              document.body.appendChild(index);
-
-              let runner = document.createElement("script");
-              runner.src = "runner.js";
-              document.body.appendChild(runner);
-          }).catch(err => {
-              console.error("Service Worker failed:", err);
-              document.getElementById('status').innerText = "SW Failed. Check console.";
+                  
+                  document.getElementById('status').innerText = `Downloading part ${index + 1} of 12...`;
+                  fetch(fileParts[index]).then((response) => {
+                      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                      return response.arrayBuffer();
+                  }).then((data) => {
+                      buffers.push(data);
+                      fetchPart(index + 1);
+                  }).catch((err) => {
+                      console.error("Failed to fetch part:", err);
+                      document.getElementById('status').innerText = `Error on part ${index + 1}!`;
+                      reject(err);
+                  });
+              }
+              fetchPart(0);
           });
       }
+  
+      function getParts(file, start, end) {
+          let parts = [];
+          for (let i = start; i <= end; i++) {
+              parts.push(file + ".part" + i);
+          }
+          return parts;
+      }
+  
+      mergeFiles(getParts("game.unx", 1, 12)).then(async url => {
+          console.log("Stitching complete! Injecting engine...");
+          document.getElementById('status').innerText = `Loading engine...`;
+          window.gameUnxUrl = url;
+  
+          const originalFetch = window.fetch;
+          window.fetch = async function (...args) {
+              let [url, options] = args;
+              if (typeof url === 'string') {
+                  if (url.includes("game.unx")) {
+                      url = window.gameUnxUrl;
+                  } else if (url.includes('undefined/')) {
+                      url = url.replace('undefined/', '');
+                  }
+              } else if (url instanceof Request && url.url.includes("game.unx")) {
+                  url = new Request(window.gameUnxUrl, url);
+              }
+              return originalFetch.call(this, url, options);
+          };
+  
+          const originalOpen = XMLHttpRequest.prototype.open;
+          XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+              if (typeof url === 'string') {
+                  if (url.includes("game.unx")) url = window.gameUnxUrl;
+                  if (url.includes('undefined/')) url = url.replace('undefined/', '');
+              }
+              return originalOpen.call(this, method, url, ...rest);
+          };
+          
+          let index = document.createElement("script");
+          index.src = "index.js";
+          document.body.appendChild(index);
+  
+          let runner = document.createElement("script");
+          runner.src = "runner.js";
+          document.body.appendChild(runner);
+      }).catch(error => {
+          console.error("Failed to merge files:", error);
+      });
     </script>
-  </body>
-</html>
+    
+    <script>
+      // Mobile Audio Unlock
+      document.addEventListener('touchstart', function unlockAudio() {
+          if (typeof Module !== 'undefined' && Module.audioContext && Module.audioContext.state === 'suspended') {
+              Module.audioContext.resume();
+          }
+          document.removeEventListener('touchstart', unlockAudio);
+      }, { once: true });
+    </script>
   </body>
 </html>
