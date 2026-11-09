@@ -549,7 +549,7 @@
       <div id="messages">
       </div>
     </div>
-    <script>
+        <script>
       function mergeFiles(fileParts) {
           return new Promise((resolve, reject) => {
               let buffers = [];
@@ -563,21 +563,16 @@
                       return;
                   }
                   
-                  // Update the loading text so you can see progress!
                   document.getElementById('status').innerText = `Downloading part ${index + 1} of 12...`;
-                  console.log(`Fetching: ${fileParts[index]}`);
-
                   fetch(fileParts[index]).then((response) => {
-                      if (!response.ok) {
-                          throw new Error(`HTTP error! status: ${response.status} for ${fileParts[index]}`);
-                      }
+                      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                       return response.arrayBuffer();
                   }).then((data) => {
                       buffers.push(data);
                       fetchPart(index + 1);
                   }).catch((err) => {
                       console.error("Failed to fetch part:", err);
-                      document.getElementById('status').innerText = `Error on part ${index + 1}! Check console.`;
+                      document.getElementById('status').innerText = `Error on part ${index + 1}!`;
                       reject(err);
                   });
               }
@@ -593,17 +588,21 @@
           return parts;
       }
   
-      // Start the process
       mergeFiles(getParts("game.unx", 1, 12)).then(async url => {
           console.log("Stitching complete! Injecting engine...");
           document.getElementById('status').innerText = `Loading engine...`;
           window.gameUnxUrl = url;
   
+          // Intercept fetch calls for game.unx AND fix the undefined/ path issue
           const originalFetch = window.fetch;
           window.fetch = async function (...args) {
               let [url, options] = args;
-              if (typeof url === 'string' && url.includes("game.unx")) {
-                  url = window.gameUnxUrl;
+              if (typeof url === 'string') {
+                  if (url.includes("game.unx")) {
+                      url = window.gameUnxUrl;
+                  } else if (url.includes('undefined/')) {
+                      url = url.replace('undefined/', '');
+                  }
               } else if (url instanceof Request && url.url.includes("game.unx")) {
                   url = new Request(window.gameUnxUrl, url);
               }
@@ -612,11 +611,20 @@
   
           const originalOpen = XMLHttpRequest.prototype.open;
           XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-              if (typeof url === 'string' && url.includes("game.unx")) {
-                  url = window.gameUnxUrl;
+              if (typeof url === 'string') {
+                  if (url.includes("game.unx")) url = window.gameUnxUrl;
+                  if (url.includes('undefined/')) url = url.replace('undefined/', '');
               }
               return originalOpen.call(this, method, url, ...rest);
           };
+
+          // Mobile Audio Unlock
+          document.addEventListener('touchstart', function unlockAudio() {
+              if (typeof Module !== 'undefined' && Module.audioContext && Module.audioContext.state === 'suspended') {
+                  Module.audioContext.resume();
+              }
+              document.removeEventListener('touchstart', unlockAudio);
+          }, { once: true });
           
           let index = document.createElement("script");
           index.src = "index.js";
@@ -628,38 +636,6 @@
       }).catch(error => {
           console.error("Failed to merge files:", error);
       });
-  </script>
-      <script>
-      // ... your existing mergeFiles code is up here ...
-    </script>
-
-    <!-- PUT THE NEW SCRIPT HERE -->
-    <script>
-        const originalFetch = window.fetch;
-        window.fetch = async function(url, ...args) {
-            if (typeof url === 'string') {
-                if (url.includes('undefined/')) {
-                    url = url.replace('undefined/', '');
-                }
-            }
-            return originalFetch.call(this, url, ...args);
-        };
     </script>
   </body>
-</html>
-      <!-- Your merging script is up here -->
-
-    <!-- ADD THIS SCRIPT -->
-    <script>
-      // Unlock mobile audio on first touch
-      document.addEventListener('touchstart', function unlockAudio() {
-          if (typeof Module !== 'undefined' && Module.audioContext && Module.audioContext.state === 'suspended') {
-              Module.audioContext.resume();
-          }
-          document.removeEventListener('touchstart', unlockAudio);
-      }, { once: true });
-    </script>
-  </body>
-</html>
-</body>
 </html>
