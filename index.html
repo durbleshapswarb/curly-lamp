@@ -592,5 +592,15 @@
     </script>
   </body>
 </html>
-  </body>
+<script>
+    // Wait for the game to load, then hide the status text
+    setInterval(() => {
+        const statusEl = document.getElementById('status');
+        // If the status text contains the error message, hide the whole element
+        if (statusEl && statusEl.innerText.includes("Exception thrown")) {
+            statusEl.style.display = 'none';
+        }
+    }, 500); // Checks every half second
+</script>  
+</body>
 </html>
