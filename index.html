@@ -6,11 +6,19 @@
   <meta charset="utf-8" />    
 <meta charset="utf-8" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
- <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+ <meta name="viewport" content="width=1280, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="icon" type="x-icon" href="favicon.png">
     <title>UNDERTALE YELLOW</title>
 <style> 
-      canvas.emscripten {
+  body {
+    /* Forces the 1280px screen to shrink down to fit your phone */
+    transform: scale(0.3); 
+    transform-origin: top left;
+    width: 1280px;
+    height: 100vh;
+    overflow: hidden;
+}    
+  canvas.emscripten {
         display: none;
         background-color: black;
         position: flex;
